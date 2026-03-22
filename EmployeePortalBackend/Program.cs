@@ -1,3 +1,10 @@
+using EmployeePortalBackend.Context;
+using EmployeePortalBackend.Interface;
+using EmployeePortalBackend.Model;
+using EmployeePortalBackend.Repository;
+using EmployeePortalBackend.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +13,13 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<IBasicCustomerRepository, BasicCustomerRepository>();
+builder.Services.AddScoped<CustomerService>();
+
+builder.Services.AddDbContext<BasicCustomerContext>(options =>
+    options.UseNpgsql("Host=localhost;Port=5432;Database=mydb;Username=myuser;Password=mypassword"));
+
 
 var app = builder.Build();
 
