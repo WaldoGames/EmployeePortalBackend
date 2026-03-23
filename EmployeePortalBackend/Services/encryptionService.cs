@@ -1,4 +1,4 @@
-﻿using EmployeePortalBackend.DTO;
+﻿using EmployeePortalBackend.DTO.CustomerDtos;
 using EmployeePortalBackend.Model;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,12 +15,12 @@ namespace EmployeePortalBackend.Services
         public encryptionService()
         {
             var vaultClientSettings = new VaultClientSettings(
-               "http://localhost:8200",
+               "http://vault:8200",
                new TokenAuthMethodInfo("dev-root-token") // use AppRole in prod-like setups
             );
             vaultClient = new VaultClient(vaultClientSettings);
         }
-        public async Task<Customer> EncryptCustomerAsync(NewCustomerDto customer, string key)
+        public async Task<Customer> EncryptCustomerAsync(CustomerInternalDto customer, string key)
         {
            
             Customer c = new Customer();
@@ -28,6 +28,7 @@ namespace EmployeePortalBackend.Services
             c.FirstName = await EncryptField(key, customer.FirstName);
             c.LastName = await EncryptField(key, customer.LastName);
             c.Birthday = await EncryptField(key, customer.Birthday);
+            c.email = await EncryptField(key, customer.Email);
             c.Id = customer.Id;
 
             using (SHA512 sha512 = SHA512.Create())
@@ -45,6 +46,7 @@ namespace EmployeePortalBackend.Services
             Decryptedcustomer.FirstName = await DecryptField(key, customer.FirstName);
             Decryptedcustomer.LastName = await DecryptField(key, customer.LastName);
             Decryptedcustomer.Birthday = await DecryptField(key, customer.Birthday);
+            Decryptedcustomer.Email = await DecryptField(key, customer.email);
             Decryptedcustomer.Id = customer.Id;
 
             return Decryptedcustomer;

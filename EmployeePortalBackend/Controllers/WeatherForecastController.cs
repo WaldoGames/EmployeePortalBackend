@@ -37,24 +37,5 @@ namespace EmployeePortalBackend.Controllers
             })
             .ToArray();
         }
-        [HttpPost("posttest/{test}/{id}")]
-        public async Task<IActionResult> Post(string test, string id)
-        {
-
-            //only first field is used during this test. the rest is just some default values:
-            await customerService.NewUser(new NewCustomerDto
-            {
-                FirstName = test,
-                LastName = "last name",
-                Birthday = "01/01/1990",
-                Id = id
-            }, "kek-standard");
-            return Ok();
-        }
-        [HttpGet("posttest/{id}")]
-        public async Task<DecryptedBasicCustomerobject?> Get(string id)
-        {
-            return await customerService.DecryptedBasicCustomerobject(id, "kek-standard");
-        }
     }
 }

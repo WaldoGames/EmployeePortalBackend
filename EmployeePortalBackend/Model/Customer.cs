@@ -13,7 +13,7 @@ namespace EmployeePortalBackend.Model
         public string Birthday { get; set; }
         public string email { get; set; }
 
-        public CustomerSenstive CustomerSenstive { get; set; }
+        public CustomerSenstive? CustomerSenstive { get; set; }
         public List<Ticket> Tickets { get; set; }
         public List<IdRequest> IdRequests { get; set; }
     }

@@ -1,7 +1,10 @@
-﻿namespace EmployeePortalBackend.Model
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EmployeePortalBackend.Model
 {
     public class IdRequest
     {
+        [Key]
         public string Id { get; set; }
         public string CustomerId { get; set; }
 
@@ -14,6 +17,8 @@
         public string CreatedDate { get; set; }
 
         public string ValidUntilDate { get; set; }
+
+        public Customer Customer { get; set; }
 
 
     }

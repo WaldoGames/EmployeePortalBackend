@@ -1,4 +1,4 @@
-﻿using EmployeePortalBackend.DTO;
+﻿using EmployeePortalBackend.DTO.CustomerDtos;
 using EmployeePortalBackend.Interface;
 using EmployeePortalBackend.Model;
 
@@ -15,7 +15,7 @@ namespace EmployeePortalBackend.Services
             encryption = new encryptionService();
         }
 
-        public async Task NewUser(NewCustomerDto newCustomer, string key)
+        public async Task NewUser(CustomerInternalDto newCustomer, string key)
         {
             Customer customer = await encryption.EncryptCustomerAsync(newCustomer, key);
 
