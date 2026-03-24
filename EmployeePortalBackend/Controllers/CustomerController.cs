@@ -39,5 +39,12 @@ namespace EmployeePortalBackend.Controllers
         {
             return await customerService.DecryptedBasicCustomerobject(id, "kek-standard");
         }
+        [HttpGet("search/{promt}")]
+        public async Task<ActionResult<List<SearchResultDto>>> Search(string promt)
+        {
+            //TODO implement fuzzy blind indexing so i can search without the full name being needed
+            List<SearchResultDto> result = await customerService.searchUsers(promt);
+            return Ok(result);
+        }
     }
 }

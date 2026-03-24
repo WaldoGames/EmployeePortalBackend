@@ -1,0 +1,12 @@
+name: helpdeskproject
+services:
+  employeeportalbackend:
+    image: ${DOCKER_REGISTRY-}employeeportalbackend
+    build:
+      context: .
+      dockerfile: EmployeePortalBackend/Dockerfile
+    networks:
+      - vault_test
+networks:
+  vault_test:
+    external: true

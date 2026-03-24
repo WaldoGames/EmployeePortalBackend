@@ -5,7 +5,7 @@ namespace EmployeePortalBackend.Model
     public class Customer
     {
         [Key]
-        public string Id { get; set; }
+        public string Id { get; set; }//not encrypted
 
         public string FirstNameHash { get; set; }
         public string FirstName { get; set; }

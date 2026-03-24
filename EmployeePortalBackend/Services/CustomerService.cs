@@ -33,5 +33,26 @@ namespace EmployeePortalBackend.Services
 
             return await encryption.DecrypteCustomer(c, key);
         }
+
+        public async Task<List<SearchResultDto>> searchUsers(string promt)
+        {
+            var hash = await encryption.EncryptSha(promt, "donutdonutgodonuts");
+
+            List<Customer> results = _repository.TrySearchByFirstName(hash);
+
+            List<SearchResultDto> resultDtos = new List<SearchResultDto>();
+
+            foreach (var item in results)
+            {
+                DecryptedBasicCustomerobject customer = await encryption.DecrypteCustomer(item, "kek-standard");
+
+                resultDtos.Add(new SearchResultDto
+                {
+                    fullName = (customer.FirstName + " " + customer.LastName),
+                    id = customer.Id
+                });
+            }
+            return resultDtos;
+        }
     }
 }

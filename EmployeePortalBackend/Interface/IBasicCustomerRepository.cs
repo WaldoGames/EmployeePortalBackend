@@ -7,5 +7,7 @@ namespace EmployeePortalBackend.Interface
         public Customer? TryGetCustomerById(string id);
 
         public void PostCustomer(Customer customer);
+
+        public List<Customer> TrySearchByFirstName(string firstName);
     }
 }

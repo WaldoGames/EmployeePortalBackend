@@ -22,5 +22,10 @@ namespace EmployeePortalBackend.Repository
         {
             return customerContext.Customers.Where(c=>c.Id == id).FirstOrDefault();     
         }
+
+        public List<Customer> TrySearchByFirstName(string firstNameHashed)
+        {
+            return customerContext.Customers.Where(c => c.FirstNameHash == firstNameHashed).ToList();
+        }
     }
 }

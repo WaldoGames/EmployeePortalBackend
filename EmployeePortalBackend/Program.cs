@@ -17,6 +17,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IBasicCustomerRepository, BasicCustomerRepository>();
 builder.Services.AddScoped<CustomerService>();
 
+builder.Services.AddScoped<ITicketRepository, TickerRepository>();
+builder.Services.AddScoped<TicketService>();
+
+
 builder.Services.AddDbContext<BasicCustomerContext>(options =>
     options.UseNpgsql("Host=customer-db;Port=5432;Database=mydb;Username=myuser;Password=mypassword;Include Error Detail=true;"));
 
