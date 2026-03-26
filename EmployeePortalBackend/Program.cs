@@ -8,7 +8,8 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+builder.Services.AddHttpClient();
+builder.Services.AddHttpClient();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -20,7 +21,17 @@ builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ITicketRepository, TickerRepository>();
 builder.Services.AddScoped<TicketService>();
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:*")
+                   .AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .AllowCredentials();
+        });
+});
 builder.Services.AddDbContext<BasicCustomerContext>(options =>
     options.UseNpgsql("Host=customer-db;Port=5432;Database=mydb;Username=myuser;Password=mypassword;Include Error Detail=true;"));
 

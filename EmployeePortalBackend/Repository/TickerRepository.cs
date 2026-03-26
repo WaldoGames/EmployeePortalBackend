@@ -19,14 +19,19 @@ namespace EmployeePortalBackend.Repository
             customerContext.SaveChanges();
         }
 
-        public void GetOpenTicketsBy(string customerId)
+        public Ticket? GetOpenTicketsById(string Id)
         {
-            throw new NotImplementedException();
+            return customerContext.Tickets.Where(t => t.Id == Id).FirstOrDefault();
         }
 
-        public void GetTicketsByCustomerId(string customerId)
+        public List<Ticket> GetTickets(int limit, int offset)
         {
-            throw new NotImplementedException();
+            return customerContext.Tickets.OrderByDescending(x => x.Status == "Open").ThenBy(x => x.EditedDate).Skip(offset * limit).Take(limit).ToList();
+        }
+
+        public List<Ticket> GetTicketsByCustomerId(string customerId)
+        {
+            return customerContext.Tickets.Where(t => t.CustomerId == customerId).ToList();
         }
     }
 }

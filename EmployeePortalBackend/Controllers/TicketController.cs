@@ -1,5 +1,6 @@
 ﻿using EmployeePortalBackend.DTO.CustomerDtos;
 using EmployeePortalBackend.DTO.TicketsDtos;
+using EmployeePortalBackend.Model;
 using EmployeePortalBackend.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -27,11 +28,34 @@ namespace EmployeePortalBackend.Controllers
         {
             string id = Guid.NewGuid().ToString();
 
-            await ticketService.createTicket(test);
+            var c = await ticketService.createTicket(test, id);
 
+            if (c == null)
+            {
+                return BadRequest("Customer not found");
+            }
 
             return Ok(id);
         }
+        [HttpGet("{Id}")]
+        public async Task<IActionResult> GetTicketById(string Id)
+        {
+            DecryptedTicketDto? decryptedTicket = await ticketService.getTicketById(Id);
+
+            if(decryptedTicket == null)
+            {
+                return BadRequest("Ticket not found");
+            }
+            return Ok(decryptedTicket);
+        }
+
+        [HttpGet("overviewlist")]
+        public async Task<IActionResult> getTicketList()
+        {
+            List<GetTicketsBasicDto> tickets = await ticketService.GetTickets();
+            return Ok(tickets);
+        }
+
         //[HttpGet("posttest/{id}")]
     }
 }

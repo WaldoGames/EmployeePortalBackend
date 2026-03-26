@@ -1,6 +1,7 @@
 ﻿using EmployeePortalBackend.DTO.TicketsDtos;
 using EmployeePortalBackend.Interface;
 using EmployeePortalBackend.Model;
+using System.ComponentModel;
 
 namespace EmployeePortalBackend.Services
 {
@@ -17,16 +18,14 @@ namespace EmployeePortalBackend.Services
             encryption = new encryptionService();
         }
 
-        public async Task<string?> createTicket(CreateTicketDto dto)
+        public async Task<string?> createTicket(CreateTicketDto dto, string id)
         {
             var customer = _customerRepository.TryGetCustomerById(dto.CustomerId);
             if (customer == null)
             {
                 return null;
             }
-
-            string id = Guid.NewGuid().ToString();
-            string encryptedDescription = await encryption.EncryptField(dto.Description, "kek-standard");
+            string encryptedDescription = await encryption.EncryptField("kek-standard", dto.Description);
 
             Ticket newTicket = new Ticket
             {
@@ -43,6 +42,78 @@ namespace EmployeePortalBackend.Services
             };
             _repository.CreateTicket(newTicket);
             return id;
+        }
+
+        public async Task<DecryptedTicketDto?> getTicketById(string ticketId)
+        {
+            Ticket? t = _repository.GetOpenTicketsById(ticketId);
+            if(t == null)
+            {
+                return null;
+            }
+
+            DecryptedTicketDto ticket = await DecryptTicket(t);
+
+            return ticket;
+        }
+        public async Task<List<GetTicketsBasicDto>> GetTickets(int limit = 50, int offset = 0)
+        {
+            List<Ticket> tickets= _repository.GetTickets(limit, offset);
+
+            List<GetTicketsBasicDto> OverviewTickets = new List<GetTicketsBasicDto>();
+
+            foreach (var item in tickets)
+            {
+                OverviewTickets.Add(new GetTicketsBasicDto
+                {
+                    EditedDate = item.EditedDate,
+                    Id = item.Id,
+                    Status = item.Status,
+                    Title = item.Title
+                });
+            }
+            return OverviewTickets;
+        }
+
+        public async Task<DecryptedTicketDto> DecryptTicket(Ticket ticket)
+        {
+            string decryptedDescription = await encryption.DecryptField("kek-standard", ticket.Description);
+
+            DecryptedTicketDto decryptedTicketDto = new DecryptedTicketDto()
+            {
+                Id = ticket.Id,
+                Title = ticket.Title,
+                Description = decryptedDescription,
+                Status = ticket.Status,
+                CreatedDate = ticket.CreatedDate,
+                EditedDate = ticket.EditedDate,
+                CustomerId = ticket.CustomerId,
+                CreatorEmployeeId = ticket.CreatorEmployeeId,
+                CreatorEmployeeName = ticket.CreatorEmployeeName,
+            };
+
+            return decryptedTicketDto;
+        }
+        public async Task<Ticket> EncryptTicket(DecryptedTicketDto decryptedTicketDto)
+        {
+
+            string encryptedDescription = await encryption.EncryptField("kek-standard", decryptedTicketDto.Description);
+
+            Ticket ticket = new Ticket()
+            {
+                Id = decryptedTicketDto.Id,
+                Title = decryptedTicketDto.Title,
+                Description = encryptedDescription,
+                Status = decryptedTicketDto.Status,
+                CreatedDate = decryptedTicketDto.CreatedDate,
+                EditedDate = decryptedTicketDto.EditedDate,
+                CustomerId = decryptedTicketDto.CustomerId,
+                CreatorEmployeeId = decryptedTicketDto.CreatorEmployeeId,
+                CreatorEmployeeName = decryptedTicketDto.CreatorEmployeeName,
+            };
+
+            return ticket;
+
         }
     }
 }

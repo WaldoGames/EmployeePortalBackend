@@ -6,8 +6,10 @@ namespace EmployeePortalBackend.Interface
     {
         public void CreateTicket(Ticket ticket);
 
-        public void GetTicketsByCustomerId(string customerId);
+        public List<Ticket> GetTicketsByCustomerId(string customerId);
 
-        public void GetOpenTicketsBy(string customerId);
+        public Ticket? GetOpenTicketsById(string Id);
+
+        public List<Ticket> GetTickets(int limit, int offset);
     }
 }
