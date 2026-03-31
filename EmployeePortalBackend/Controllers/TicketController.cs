@@ -26,6 +26,11 @@ namespace EmployeePortalBackend.Controllers
         [HttpPost("")]
         public async Task<IActionResult> Post([FromBody] CreateTicketDto test)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             string id = Guid.NewGuid().ToString();
 
             var c = await ticketService.createTicket(test, id);
