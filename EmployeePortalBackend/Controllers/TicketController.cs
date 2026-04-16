@@ -1,12 +1,15 @@
 ﻿using EmployeePortalBackend.DTO.CustomerDtos;
 using EmployeePortalBackend.DTO.TicketsDtos;
+using EmployeePortalBackend.Logger;
 using EmployeePortalBackend.Model;
 using EmployeePortalBackend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeePortalBackend.Controllers
 {
+    [Authorize(Roles = "EmployeeTickets")]
     [ApiController]
     [Route("[controller]")]
     public class TicketController : Controller
@@ -52,6 +55,7 @@ namespace EmployeePortalBackend.Controllers
         [HttpGet("overviewlist")]
         public async Task<IActionResult> getTicketList()
         {
+
             List<GetTicketsBasicDto> tickets = await ticketService.GetTickets();
             return Ok(tickets);
         }

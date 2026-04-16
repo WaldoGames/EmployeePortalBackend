@@ -1,10 +1,12 @@
 using EmployeePortalBackend.DTO;
 using EmployeePortalBackend.Model;
 using EmployeePortalBackend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeePortalBackend.Controllers
 {
+    [Authorize(Roles = "EmployeeEditUsers")]
     [ApiController]
     [Route("[controller]")]
     public class WeatherForecastController : Controller
