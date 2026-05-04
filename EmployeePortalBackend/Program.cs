@@ -14,6 +14,10 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .AddJsonFile("appsettings.json")
+    .AddUserSecrets<Program>()   // © this line must be present
+    .AddEnvironmentVariables();
 // Add services to the container.
 builder.Services.AddHttpClient();
 builder.Services.AddHttpClient();
@@ -48,6 +52,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+builder.Services.Configure<VaultOptions>(
+    builder.Configuration.GetSection("Vault"));
+builder.Services.AddSingleton<VaultService>();
 
 
 //logger
@@ -171,6 +179,7 @@ builder.Services.AddAuthentication(options =>
 
 
 var app = builder.Build();
+await app.Services.GetRequiredService<VaultService>().init();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -186,3 +195,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

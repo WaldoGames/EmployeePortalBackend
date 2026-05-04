@@ -16,5 +16,7 @@ namespace EmployeePortalBackend.Model
         public CustomerSenstive? CustomerSenstive { get; set; }
         public List<Ticket> Tickets { get; set; }
         public List<IdRequest> IdRequests { get; set; }
+
+        public List<TrigramHashes> TrigramHashes { get; set; }
     }
 }

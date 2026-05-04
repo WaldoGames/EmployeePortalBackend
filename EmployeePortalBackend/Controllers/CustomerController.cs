@@ -6,19 +6,21 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeePortalBackend.Controllers
 {
-    [Authorize(Roles = "EmployeeEditUsers")]
+    //[Authorize(Roles = "EmployeeEditUsers")]
     [ApiController]
     [Route("[controller]")]
-    public class CustomerController: Controller
+    public class CustomerController : Controller
     {
         private CustomerService customerService;
 
         private readonly ILogger<CustomerController> _logger;
+        private VaultService vc;
 
-        public CustomerController(CustomerService customerService, ILogger<CustomerController> logger)
+        public CustomerController(CustomerService customerService, ILogger<CustomerController> logger, VaultService vc)
         {
             this.customerService = customerService;
             _logger = logger;
+            this.vc = vc;
         }
         [HttpPost("")]
         public async Task<IActionResult> Post([FromBody] NewCustomerDto test)
@@ -48,5 +50,21 @@ namespace EmployeePortalBackend.Controllers
             List<SearchResultDto> result = await customerService.searchUsers(promt);
             return Ok(result);
         }
+
+        [HttpGet("trigramtest/{promt}")]
+        public async Task<ActionResult<List<string>>> TrigramTest(string promt)
+        {
+            string[] trigrams = customerService.generateTrigrams(promt);
+            return Ok(trigrams);
+        }
+        [HttpGet("HashTest/{promt}")]
+        public async Task<ActionResult<string>> test(string promt)
+        {
+
+            string[] trigrams = customerService.generateTrigrams(promt);
+
+            return Ok(await vc.ComputeHmacBatchAsync(trigrams));
+        }
+        
     }
 }

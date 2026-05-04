@@ -9,13 +9,13 @@ namespace EmployeePortalBackend.Services
     {
         IBasicCustomerRepository _customerRepository;
         ITicketRepository _repository;
-        encryptionService encryption;
+        VaultService encryption;
 
-        public TicketService(IBasicCustomerRepository repo, ITicketRepository trepo)
+        public TicketService(IBasicCustomerRepository repo, ITicketRepository trepo, VaultService vc)
         {
             _customerRepository = repo;
             _repository = trepo;
-            encryption = new encryptionService();
+            encryption = vc;
         }
 
         public async Task<string?> createTicket(CreateTicketDto dto, string id)

@@ -14,6 +14,8 @@ namespace EmployeePortalBackend.Context
         public DbSet<Ticket> Tickets { get; set; }
         public DbSet<IdRequest> IdRequests { get; set; }
 
+        public DbSet<TrigramHashes> TrigramHashes { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -38,6 +40,10 @@ namespace EmployeePortalBackend.Context
                 .WithOne(ir => ir.Customer)
                 .HasForeignKey(ir => ir.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Customer>()
+                .HasMany(c => c.TrigramHashes)
+                .WithMany(th => th.Customers);
         }
 
     }

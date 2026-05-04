@@ -10,6 +10,7 @@ services:
     environment:
       - ConnectionStrings__LogWriter=${LOG_WRITER_CONN}
       - ConnectionStrings__LogReader=${LOG_READER_CONN}
+      - Vault__SecretId=${Vault__SecretId}
 networks:
   vault_test:
     external: true
