@@ -24,46 +24,17 @@ namespace EmployeePortalBackend.Services
         {
             _opts = opts.Value;
             _logger = logger;
-        }
 
-        public async Task init()
-        {
-            var authMethod = new AppRoleAuthMethodInfo(
-            roleId: _opts.RoleId,
-            secretId: _opts.SecretId
-            );
+            var authMethod = new TokenAuthMethodInfo(_opts.AgentToken);
 
             var vaultClientSettings = new VaultClientSettings(
-               "http://vault:8200", //_opts.VaultAddress
-               authMethod
-            //new TokenAuthMethodInfo("hvs.rt0CvTff0bB83UxT4QH53hYS") // use AppRole in prod-like setups
+                "http://vault-agent:8007",
+                authMethod
             );
+
             vaultClient = new VaultClient(vaultClientSettings);
-            var renewed = await vaultClient.V1.Auth.Token.RenewSelfAsync();
-            ScheduleRenewal(renewed.LeaseDurationSeconds);
-
-            _logger.LogInformation("Vault AppRole login successful: " + renewed.LeaseDurationSeconds.ToString());
-        }
-        private void ScheduleRenewal(long ttlSeconds)
-        {
-            var renewIn = TimeSpan.FromSeconds(ttlSeconds * 0.8);
-
-            _renewalTimer?.Dispose();
-            _renewalTimer = new Timer(async _ =>
-            {
-                try
-                {
-                    var renewed = await vaultClient.V1.Auth.Token.RenewSelfAsync();
-                    _logger.LogInformation("Vault token renewed, new TTL: {TTL}s",
-                        renewed.LeaseDurationSeconds);
-                    ScheduleRenewal(renewed.LeaseDurationSeconds);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Token renewal failed — re-authenticating");
-                    await init();
-                }
-            }, null, renewIn, Timeout.InfiniteTimeSpan);
+            _logger.LogInformation("VaultService initialised — using Vault Agent proxy at {Address}",
+                "http://vault-agent:8007");
         }
 
         public async Task<string> GetHmacSecretAsync()
@@ -175,8 +146,10 @@ namespace EmployeePortalBackend.Services
     }
     public class VaultOptions
     {
-        public string VaultAddress { get; set; }
+        public string AgentAddress { get; set; }
         public string RoleId { get; set; }   // non-secret, can be in appsettings
         public string SecretId { get; set; }  // SECRET — inject via env/K8s
+
+        public string AgentToken { get; set; } // For Vault Agent Token Auth method
     }
 }

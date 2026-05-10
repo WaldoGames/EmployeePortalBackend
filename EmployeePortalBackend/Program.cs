@@ -16,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile("appsettings.json")
-    .AddUserSecrets<Program>()   // Å© this line must be present
+    .AddUserSecrets<Program>()
     .AddEnvironmentVariables();
 // Add services to the container.
 builder.Services.AddHttpClient();
@@ -53,8 +53,18 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.Configure<VaultOptions>(
-    builder.Configuration.GetSection("Vault"));
+builder.Services.Configure<VaultOptions>(opts =>
+{
+    opts.AgentAddress = builder.Configuration["Vault:AgentAddress"]
+                        ?? "http://127.0.0.1:8007";
+
+    var tokenPath = builder.Configuration["Vault:AgentTokenPath"]
+                    ?? "/vault/token";
+
+    opts.AgentToken = File.Exists(tokenPath)
+        ? File.ReadAllText(tokenPath).Trim()
+        : "agent-proxy-token"; 
+});
 builder.Services.AddSingleton<VaultService>();
 
 
@@ -179,7 +189,6 @@ builder.Services.AddAuthentication(options =>
 
 
 var app = builder.Build();
-await app.Services.GetRequiredService<VaultService>().init();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
