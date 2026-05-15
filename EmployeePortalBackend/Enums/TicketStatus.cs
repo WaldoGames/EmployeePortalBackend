@@ -2,6 +2,6 @@
 {
     public enum TicketStatus
     {
-        open,pending,resolved
+        open,inprogress,pending,resolved
     }
 }

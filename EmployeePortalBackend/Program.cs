@@ -61,6 +61,8 @@ builder.Services.Configure<VaultOptions>(opts =>
     var tokenPath = builder.Configuration["Vault:AgentTokenPath"]
                     ?? "/vault/token";
 
+    Console.WriteLine(tokenPath);
+
     opts.AgentToken = File.Exists(tokenPath)
         ? File.ReadAllText(tokenPath).Trim()
         : "agent-proxy-token"; 
@@ -113,6 +115,9 @@ builder.Services.AddScoped<CustomerService>();
 
 builder.Services.AddScoped<ITicketRepository, TickerRepository>();
 builder.Services.AddScoped<TicketService>();
+
+builder.Services.AddScoped<IIdRequestRepository, IdRequestRepository>();
+builder.Services.AddScoped<ImageRequestService>();
 
 builder.Services.AddCors(options =>
 {

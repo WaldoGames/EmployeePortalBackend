@@ -1,15 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using EmployeePortalBackend.Enums;
+using EmployeePortalBackend.Model;
 
-namespace EmployeePortalBackend.Model
+namespace EmployeePortalBackend.DTO.ìmageDtos
 {
-    public class IdRequest
+    public class UploadRequestActiveDto
     {
-        [Key]
         public string Id { get; set; }
         public string CustomerId { get; set; }
         public string EmployeeId { get; set; }
         public string EmployeeName { get; set; }
-        public string status { get; set; }
+        public UploadStatus status { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime ValidUntilDate { get; set; }
         public string ObjectKey { get; set; }

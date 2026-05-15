@@ -75,6 +75,23 @@ namespace EmployeePortalBackend.Services
             return OverviewTickets;
         }
 
+        public async Task<string> EditTicket(EditTicketDTO newData, string ticketId)
+        {
+            Ticket? existingTicket = _repository.GetOpenTicketsById(ticketId);
+            if (existingTicket == null)
+            {
+                return null;
+            }
+
+            existingTicket.Title = newData.Title;
+            existingTicket.Description = await encryption.EncryptField("kek-standard", newData.Description);
+            existingTicket.Status = newData.Status;
+            existingTicket.EditedDate = DateTime.UtcNow.ToString();
+
+            _repository.UpdateTicket();
+            return ticketId;
+        }
+
         public async Task<DecryptedTicketDto> DecryptTicket(Ticket ticket)
         {
             string decryptedDescription = await encryption.DecryptField("kek-standard", ticket.Description);

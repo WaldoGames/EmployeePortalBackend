@@ -65,6 +65,24 @@ namespace EmployeePortalBackend.Controllers
             return Ok(tickets);
         }
 
+        [HttpPut("{Id}")]
+        public async Task<IActionResult> UpdateTicket(string Id, [FromBody] EditTicketDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await ticketService.EditTicket(dto, Id);
+
+            if (result == null)
+            {
+                return BadRequest("Ticket not found");
+            }
+
+            return Ok(new { message = result });
+        }
+
         //[HttpGet("posttest/{id}")]
     }
 }

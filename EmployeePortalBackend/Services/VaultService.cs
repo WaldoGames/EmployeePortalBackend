@@ -1,4 +1,6 @@
 ﻿using EmployeePortalBackend.DTO.CustomerDtos;
+using EmployeePortalBackend.DTO.ìmageDtos;
+using EmployeePortalBackend.Enums;
 using EmployeePortalBackend.Model;
 using Microsoft.Extensions.Options;
 using System.Net.Http;
@@ -108,6 +110,41 @@ namespace EmployeePortalBackend.Services
 
             return Decryptedcustomer;
 
+        }
+
+        public async Task<IdRequest> EncryptIdRequest(UploadRequestActiveDto uploadRequest, string key)
+        {
+            var idRequest = new IdRequest
+            {
+                Id = uploadRequest.Id,
+                CustomerId = uploadRequest.CustomerId,
+                EmployeeId = await EncryptField(key, uploadRequest.EmployeeId),
+                EmployeeName = await EncryptField(key, uploadRequest.EmployeeName),
+                status = await EncryptField(key, uploadRequest.status.ToString()),
+                CreatedDate = uploadRequest.CreatedDate,
+                ValidUntilDate =  uploadRequest.ValidUntilDate,
+                ObjectKey = await EncryptField(key, uploadRequest.ObjectKey),
+                Customer = uploadRequest.Customer
+            };
+
+            return idRequest;
+        }
+
+        public async Task<UploadRequestActiveDto> DecryptIdRequest(IdRequest idRequest, string key)
+        {
+            var decryptedIdRequest = new UploadRequestActiveDto
+            {
+                Id = idRequest.Id,
+                CustomerId = idRequest.CustomerId,
+                EmployeeId = await DecryptField(key, idRequest.EmployeeId),
+                EmployeeName = await DecryptField(key, idRequest.EmployeeName),
+                status = (UploadStatus)Enum.Parse(typeof(UploadStatus), await DecryptField(key, idRequest.status)),
+                CreatedDate = idRequest.CreatedDate,
+                ValidUntilDate = idRequest.ValidUntilDate,
+                ObjectKey = await DecryptField(key, idRequest.ObjectKey),
+                Customer = idRequest.Customer
+            };
+            return decryptedIdRequest;
         }
 
         public async Task<string> EncryptField(string key, string field)

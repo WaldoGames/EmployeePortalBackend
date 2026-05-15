@@ -33,5 +33,10 @@ namespace EmployeePortalBackend.Repository
         {
             return customerContext.Tickets.Where(t => t.CustomerId == customerId).ToList();
         }
+
+        public void UpdateTicket()
+        {
+            customerContext.SaveChanges();
+        }
     }
 }
