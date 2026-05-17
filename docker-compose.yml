@@ -7,10 +7,8 @@ services:
       dockerfile: EmployeePortalBackend/Dockerfile
     networks:
       - vault_test
-    environment:
-      - ConnectionStrings__LogWriter=${LOG_WRITER_CONN}
-      - ConnectionStrings__LogReader=${LOG_READER_CONN}
-      - Vault__SecretId=${Vault__SecretId}
+    env_file:
+      - .env
 networks:
   vault_test:
     external: true

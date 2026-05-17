@@ -1,12 +1,16 @@
 ﻿using EmployeePortalBackend.DTO;
 using EmployeePortalBackend.DTO.CustomerDtos;
 using EmployeePortalBackend.Services;
+using EmployeePortalBackend.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using System.Runtime;
+using System.Security.Claims;
 
 namespace EmployeePortalBackend.Controllers
 {
-    //[Authorize(Roles = "EmployeeEditUsers")]
+    [Authorize(Roles = "EmployeeEditUsers")]
     [ApiController]
     [Route("[controller]")]
     public class CustomerController : Controller
@@ -15,19 +19,21 @@ namespace EmployeePortalBackend.Controllers
 
         private readonly ILogger<CustomerController> _logger;
         private VaultService vc;
+        private readonly VaultKeySettings _vaultOptions;
 
-        public CustomerController(CustomerService customerService, ILogger<CustomerController> logger, VaultService vc)
+        public CustomerController(CustomerService customerService, ILogger<CustomerController> logger, VaultService vc, IOptions<VaultKeySettings> vaultOptions)
         {
             this.customerService = customerService;
             _logger = logger;
             this.vc = vc;
+            _vaultOptions = vaultOptions.Value;
         }
         [HttpPost("")]
         public async Task<IActionResult> Post([FromBody] NewCustomerDto test)
         {
+            _logger.LogInformation("Received new customer, created by {UserId}", User.FindFirstValue(ClaimTypes.NameIdentifier) );
             string id = Guid.NewGuid().ToString();
 
-            //only first field is used during this test. the rest is just some default values:
             await customerService.NewUser(new CustomerInternalDto
             {
                 FirstName = test.FirstName,
@@ -41,30 +47,27 @@ namespace EmployeePortalBackend.Controllers
         [HttpGet("posttest/{id}")]
         public async Task<DecryptedBasicCustomerobject?> Get(string id)
         {
-            return await customerService.DecryptedBasicCustomerobject(id, "kek-standard");
+            _logger.LogInformation("Requested basic customer information, requested by {UserId}", User.FindFirstValue(ClaimTypes.NameIdentifier));
+            return await customerService.DecryptedBasicCustomerobject(id, getKey());
         }
         [HttpGet("search/{promt}")]
         public async Task<ActionResult<List<SearchResultDto>>> Search(string promt)
         {
-            //TODO implement fuzzy blind indexing so i can search without the full name being needed
-            List<SearchResultDto> result = await customerService.searchUsers(promt);
+            _logger.LogInformation("Search request {promt} done by {UserId}", promt, User.FindFirstValue(ClaimTypes.NameIdentifier));
+            List<SearchResultDto> result = await customerService.searchUsers(promt, getKey());
             return Ok(result);
         }
 
-        [HttpGet("trigramtest/{promt}")]
-        public async Task<ActionResult<List<string>>> TrigramTest(string promt)
+        private string getKey()
         {
-            string[] trigrams = customerService.generateTrigrams(promt);
-            return Ok(trigrams);
-        }
-        [HttpGet("HashTest/{promt}")]
-        public async Task<ActionResult<string>> test(string promt)
-        {
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return string.Empty;
+            }
 
-            string[] trigrams = customerService.generateTrigrams(promt);
-
-            return Ok(await vc.ComputeHmacBatchAsync(trigrams));
+            return User.IsInRole("SensitiveInformation")
+                ? _vaultOptions.SensitiveKey
+                : _vaultOptions.NormalKey;
         }
-        
     }
 }

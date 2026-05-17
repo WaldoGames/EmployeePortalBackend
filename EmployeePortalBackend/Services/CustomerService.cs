@@ -22,7 +22,7 @@ namespace EmployeePortalBackend.Services
 
             await _repository.PostCustomer(customer);
 
-            await ConnectUserToTrigrams(newCustomer.FullName, customer.Id);
+            await ConnectUserToTrigrams(newCustomer.FullName, customer.Id, key);
         }
 
         public async Task<DecryptedBasicCustomerobject?> DecryptedBasicCustomerobject(string id, string key)
@@ -37,15 +37,11 @@ namespace EmployeePortalBackend.Services
             return await encryption.DecrypteCustomer(c, key);
         }
 
-        public async Task<List<SearchResultDto>> searchUsers(string promt)
+        public async Task<List<SearchResultDto>> searchUsers(string promt, string key)
         {
-            var hash = await encryption.EncryptSha(promt, "donutdonutgodonuts");
-
-
-
             List<string> trigrams = generateTrigrams(promt).ToList();
 
-            List<string> hashes = await encryption.ComputeHmacBatchAsync(trigrams);
+            List<string> hashes = await encryption.ComputeHmacBatchAsync(trigrams, key);
 
             List<Customer> results = _repository.TrySearchForCustomers(hashes);
 
@@ -53,7 +49,7 @@ namespace EmployeePortalBackend.Services
 
             foreach (var item in results)
             {
-                DecryptedBasicCustomerobject customer = await encryption.DecrypteCustomer(item, "kek-standard");
+                DecryptedBasicCustomerobject customer = await encryption.DecrypteCustomer(item, key);
 
                 resultDtos.Add(new SearchResultDto
                 {
@@ -75,10 +71,10 @@ namespace EmployeePortalBackend.Services
             }
             return trigramHashes;
         }
-        public async Task ConnectUserToTrigrams(string Fullname, string customerId)
+        public async Task ConnectUserToTrigrams(string Fullname, string customerId, string key)
         {
             List<string> trigrams = generateTrigrams(Fullname).ToList();
-            List<string> trigramHashes = await encryption.ComputeHmacBatchAsync(trigrams);
+            List<string> trigramHashes = await encryption.ComputeHmacBatchAsync(trigrams, key);
             List<string> newHashes = _repository.CheckForNewTrigrams(trigramHashes);
             if (newHashes.Count > 0)
             {
@@ -103,5 +99,6 @@ namespace EmployeePortalBackend.Services
             }
             return trigrams;
         }
+
     }
 }

@@ -3,6 +3,7 @@ using EmployeePortalBackend.Interface;
 using EmployeePortalBackend.Model;
 using EmployeePortalBackend.Repository;
 using EmployeePortalBackend.Services;
+using EmployeePortalBackend.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -69,6 +70,17 @@ builder.Services.Configure<VaultOptions>(opts =>
 });
 builder.Services.AddSingleton<VaultService>();
 
+builder.Services.Configure<VaultKeySettings>(
+    builder.Configuration.GetSection("Vault")
+);
+
+builder.Services.Configure<VaultKeySettings>(
+    builder.Configuration.GetSection("Vault")
+);
+builder.Services.Configure<MiniOSettings>(
+    builder.Configuration.GetSection("MiniO")
+);
+//MiniO
 
 //logger
 #region logger

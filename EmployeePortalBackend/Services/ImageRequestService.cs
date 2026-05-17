@@ -6,6 +6,8 @@ using EmployeePortalBackend.DTO.ìmageDtos;
 using EmployeePortalBackend.Enums;
 using EmployeePortalBackend.Interface;
 using EmployeePortalBackend.Model;
+using EmployeePortalBackend.Settings;
+using Microsoft.Extensions.Options;
 using System.Net;
 
 namespace EmployeePortalBackend.Services
@@ -16,21 +18,29 @@ namespace EmployeePortalBackend.Services
         IIdRequestRepository _repository;
         VaultService encryption;
 
-        string accessKey = "minioAdmin";
-        string secretKey = "EFNJOjklIE-FOHkk767FE90238k902-UEF2EFN3FIO-EHD";
-        string minioEndpoint = "http://minio:9000";
-        string bucketName = "helpdesk-customer-uploads";
+        string accessKey = "";
+        string secretKey = "";
+        string minioEndpoint = "";
+        string bucketName = "";
 
-        string krakendEndpoint = "http://localhost:8082/idrequest";
+        string FrontEndUrl = "";
+        MiniOSettings minioSettings;
 
         AmazonS3Config s3Config;
-        public ImageRequestService(IBasicCustomerRepository repo, IIdRequestRepository trepo, VaultService vc)
+        public ImageRequestService(IBasicCustomerRepository repo, IIdRequestRepository trepo, VaultService vc, IOptions<MiniOSettings> MinioSettings)
         {
+            minioSettings = MinioSettings.Value;
+    
+            accessKey = minioSettings.AccessKey;
+            secretKey = minioSettings.SecretKey;
+            minioEndpoint = minioSettings.Endpoint;
+            bucketName = minioSettings.BucketName;
+            FrontEndUrl = minioSettings.GeneratedLinkEndpoint;
             s3Config = new AmazonS3Config
             {
-                ServiceURL = "http://minio:9000",
+                ServiceURL = minioEndpoint,
                 ForcePathStyle = true,
-                AuthenticationRegion = "us-east-1" // Add this line!
+                AuthenticationRegion = "us-east-1"
             };
 
             _customerRepository = repo;
@@ -39,7 +49,7 @@ namespace EmployeePortalBackend.Services
         }
         //generate the inital upload url
 
-        public async Task<string?> GenerateInitialUploadUrl(CreateUploadRequestDto createUploadRequestDto)
+        public async Task<string?> GenerateInitialUploadUrl(CreateUploadRequestDto createUploadRequestDto, string key)
         {
             string newId = Guid.NewGuid().ToString();
             string objectKey = $"upload-{newId}";
@@ -56,7 +66,7 @@ namespace EmployeePortalBackend.Services
                 ValidUntilDate = DateTime.UtcNow.AddHours(1),
             };
 
-            IdRequest request = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+            IdRequest request = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
 
             if (_repository.DoesActiveRequestExistForUser(uploadRequestActiveDto.CustomerId))
             {
@@ -65,9 +75,9 @@ namespace EmployeePortalBackend.Services
                 //remove old request  
                 IdRequest? idRequest = _repository.GetIdRequestForUser(uploadRequestActiveDto.CustomerId);
 
-                UploadRequestActiveDto uploadRequestActiveDtoOld = await encryption.DecryptIdRequest(idRequest, "kek-standard");
+                UploadRequestActiveDto uploadRequestActiveDtoOld = await encryption.DecryptIdRequest(idRequest, key);
                 uploadRequestActiveDtoOld.status = UploadStatus.failed;
-                IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDtoOld, "kek-standard");
+                IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDtoOld, key);
                 idRequest.status = updatedRequest.status;
                 _repository.UpdateIdRequest(updatedRequest);
 
@@ -78,7 +88,7 @@ namespace EmployeePortalBackend.Services
             
             _repository.CreateIdRequest(request);
 
-            string url = $"http://localhost:3000/upload/{request.Id}"; ;
+            string url = $"{FrontEndUrl}{request.Id}";
 
             return url;
 
@@ -102,7 +112,7 @@ namespace EmployeePortalBackend.Services
 
         //check if the token can be used to generate a minio url
         //generate the minio url for the frontend to upload the image to
-        public async Task<string?> checkTokenAndGenerateMinioUrl(string token)
+        public async Task<string?> checkTokenAndGenerateMinioUrl(string token, string key)
         {
             IdRequest? idRequest = _repository.TryGetObjectKeyForId(token);
 
@@ -111,7 +121,7 @@ namespace EmployeePortalBackend.Services
                 return null;
             }
 
-            UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, "kek-standard");
+            UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, key);
 
             if (uploadRequestActiveDto.ValidUntilDate < DateTime.UtcNow || (uploadRequestActiveDto.status != UploadStatus.pending&& uploadRequestActiveDto.status != UploadStatus.unused))
             {
@@ -119,7 +129,7 @@ namespace EmployeePortalBackend.Services
             }
 
             uploadRequestActiveDto.status = UploadStatus.pending;
-            IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+            IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
 
             idRequest.status = updatedRequest.status;
             
@@ -132,26 +142,26 @@ namespace EmployeePortalBackend.Services
         }
 
         //when minio upload is complete and the frontend recieved the confimation, update the status of the request to pending
-        public async Task<bool> ConfirmUpload(string token)
+        public async Task<bool> ConfirmUpload(string token, string key)
         {
             IdRequest? idRequest = _repository.TryGetObjectKeyForId(token);
             if (idRequest == null)
             {
                 return false;
             }
-            UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, "kek-standard");
+            UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, key);
             if (uploadRequestActiveDto.ValidUntilDate < DateTime.UtcNow || uploadRequestActiveDto.status != UploadStatus.pending)
             {
                 return false;
             }
             uploadRequestActiveDto.status = UploadStatus.completed;
-            IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+            IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
             idRequest.status = updatedRequest.status;
             _repository.UpdateIdRequest(updatedRequest);
             return true;
         }
 
-        public async Task<bool> UploadImageAsync(Stream fileStream, string id, string contentType)
+        public async Task<bool> UploadImageAsync(Stream fileStream, string id, string contentType, string key)
         {
             try
             {
@@ -160,7 +170,7 @@ namespace EmployeePortalBackend.Services
                 {
                     return false;
                 }
-                UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, "kek-standard");
+                UploadRequestActiveDto uploadRequestActiveDto = await encryption.DecryptIdRequest(idRequest, key);
                 if (uploadRequestActiveDto.ValidUntilDate < DateTime.UtcNow || (uploadRequestActiveDto.status != UploadStatus.pending && uploadRequestActiveDto.status != UploadStatus.unused))
                 {
                     
@@ -182,7 +192,7 @@ namespace EmployeePortalBackend.Services
                         response = await client.PutObjectAsync(putRequest);
 
                         uploadRequestActiveDto.status = UploadStatus.completed;
-                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
                         idRequest.status = updatedRequest.status;
                         _repository.UpdateIdRequest(updatedRequest);
                     }
@@ -192,7 +202,7 @@ namespace EmployeePortalBackend.Services
                         Console.WriteLine($"S3 Error Code: {e.ErrorCode}");
 
                         uploadRequestActiveDto.status = UploadStatus.failed;
-                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
                         idRequest.status = updatedRequest.status;
                         _repository.UpdateIdRequest(updatedRequest);
                     }
@@ -201,7 +211,7 @@ namespace EmployeePortalBackend.Services
                         Console.WriteLine($"General Error: {e.Message}");
 
                         uploadRequestActiveDto.status = UploadStatus.failed;
-                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, "kek-standard");
+                        IdRequest updatedRequest = await encryption.EncryptIdRequest(uploadRequestActiveDto, key);
                         idRequest.status = updatedRequest.status;
                         _repository.UpdateIdRequest(updatedRequest);
                     }
@@ -222,14 +232,14 @@ namespace EmployeePortalBackend.Services
             }
         }
 
-        public async Task<(Stream? stream, string? contentType, bool expired)> GetImageAsync(string customerId)
+        public async Task<(Stream? stream, string? contentType, bool expired)> GetImageAsync(string customerId, string key)
         {
             IdRequest? idRequest = _repository.GetIdRequestForUser(customerId);
 
             if (idRequest == null)
                 return (null, null, false);
 
-            UploadRequestActiveDto dto = await encryption.DecryptIdRequest(idRequest, "kek-standard");
+            UploadRequestActiveDto dto = await encryption.DecryptIdRequest(idRequest, key);
 
             if (dto.status != UploadStatus.completed)
                 return (null, null, false);

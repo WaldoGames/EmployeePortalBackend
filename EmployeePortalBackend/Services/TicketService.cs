@@ -1,6 +1,7 @@
 ﻿using EmployeePortalBackend.DTO.TicketsDtos;
 using EmployeePortalBackend.Interface;
 using EmployeePortalBackend.Model;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel;
 
 namespace EmployeePortalBackend.Services
@@ -18,14 +19,14 @@ namespace EmployeePortalBackend.Services
             encryption = vc;
         }
 
-        public async Task<string?> createTicket(CreateTicketDto dto, string id)
+        public async Task<string?> createTicket(CreateTicketDto dto, string id, string key)
         {
             var customer = _customerRepository.TryGetCustomerById(dto.CustomerId);
             if (customer == null)
             {
                 return null;
             }
-            string encryptedDescription = await encryption.EncryptField("kek-standard", dto.Description);
+            string encryptedDescription = await encryption.EncryptField(key, dto.Description);
 
             Ticket newTicket = new Ticket
             {
@@ -44,7 +45,7 @@ namespace EmployeePortalBackend.Services
             return id;
         }
 
-        public async Task<DecryptedTicketDto?> getTicketById(string ticketId)
+        public async Task<DecryptedTicketDto?> getTicketById(string ticketId, string key)
         {
             Ticket? t = _repository.GetOpenTicketsById(ticketId);
             if(t == null)
@@ -52,7 +53,7 @@ namespace EmployeePortalBackend.Services
                 return null;
             }
 
-            DecryptedTicketDto ticket = await DecryptTicket(t);
+            DecryptedTicketDto ticket = await DecryptTicket(t, key);
 
             return ticket;
         }
@@ -75,7 +76,7 @@ namespace EmployeePortalBackend.Services
             return OverviewTickets;
         }
 
-        public async Task<string> EditTicket(EditTicketDTO newData, string ticketId)
+        public async Task<string> EditTicket(EditTicketDTO newData, string ticketId, string key)
         {
             Ticket? existingTicket = _repository.GetOpenTicketsById(ticketId);
             if (existingTicket == null)
@@ -84,7 +85,7 @@ namespace EmployeePortalBackend.Services
             }
 
             existingTicket.Title = newData.Title;
-            existingTicket.Description = await encryption.EncryptField("kek-standard", newData.Description);
+            existingTicket.Description = await encryption.EncryptField(key, newData.Description);
             existingTicket.Status = newData.Status;
             existingTicket.EditedDate = DateTime.UtcNow.ToString();
 
@@ -92,9 +93,9 @@ namespace EmployeePortalBackend.Services
             return ticketId;
         }
 
-        public async Task<DecryptedTicketDto> DecryptTicket(Ticket ticket)
+        public async Task<DecryptedTicketDto> DecryptTicket(Ticket ticket, string key)
         {
-            string decryptedDescription = await encryption.DecryptField("kek-standard", ticket.Description);
+            string decryptedDescription = await encryption.DecryptField(key, ticket.Description);
 
             DecryptedTicketDto decryptedTicketDto = new DecryptedTicketDto()
             {
@@ -111,10 +112,10 @@ namespace EmployeePortalBackend.Services
 
             return decryptedTicketDto;
         }
-        public async Task<Ticket> EncryptTicket(DecryptedTicketDto decryptedTicketDto)
+        public async Task<Ticket> EncryptTicket(DecryptedTicketDto decryptedTicketDto, string key)
         {
 
-            string encryptedDescription = await encryption.EncryptField("kek-standard", decryptedTicketDto.Description);
+            string encryptedDescription = await encryption.EncryptField(key, decryptedTicketDto.Description);
 
             Ticket ticket = new Ticket()
             {

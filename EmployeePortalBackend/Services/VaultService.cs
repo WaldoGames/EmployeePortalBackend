@@ -57,7 +57,7 @@ namespace EmployeePortalBackend.Services
             var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(input));
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
-        public async Task<List<string>> ComputeHmacBatchAsync(IEnumerable<string> inputs)
+        public async Task<List<string>> ComputeHmacBatchAsync(IEnumerable<string> inputs, string key)
         {
             var batchItems = inputs
                 .Select(input => new HmacSingleInput
@@ -74,7 +74,7 @@ namespace EmployeePortalBackend.Services
 
             var response = await vaultClient.V1.Secrets.Transit
                 .GenerateHmacAsync(
-                    "kek-standard",
+                    key,
                     hmacRequest);
 
             return response.Data.BatchResults
@@ -184,9 +184,9 @@ namespace EmployeePortalBackend.Services
     public class VaultOptions
     {
         public string AgentAddress { get; set; }
-        public string RoleId { get; set; }   // non-secret, can be in appsettings
-        public string SecretId { get; set; }  // SECRET — inject via env/K8s
+        public string RoleId { get; set; }   
+        public string SecretId { get; set; }  
 
-        public string AgentToken { get; set; } // For Vault Agent Token Auth method
+        public string AgentToken { get; set; } 
     }
 }
