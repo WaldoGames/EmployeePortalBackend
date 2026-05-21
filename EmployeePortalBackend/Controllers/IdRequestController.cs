@@ -66,6 +66,7 @@ namespace EmployeePortalBackend.Controllers
             _logger.LogError("Id request for request {Request} failed", id);
             return StatusCode(500, "Internal server error during upload");
         }
+        [Authorize(Roles = "SensitiveDataAccess")]
         [HttpGet("load-direct")]
         public async Task<IActionResult> LoadImage([FromQuery] string customerId)
         {
