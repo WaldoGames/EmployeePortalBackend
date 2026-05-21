@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /.env
 / - kopie.env
+/certs
+/backend.crt
+/backend.key
