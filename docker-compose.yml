@@ -9,6 +9,10 @@ services:
       - vault_test
     env_file:
       - .env
+    volumes:
+      # Mount both files here so your .NET application can use them to encrypt port 8081:
+      - ./backend.crt:/certs/backend.crt
+      - ./backend.key:/certs/backend.key
 networks:
   vault_test:
     external: true

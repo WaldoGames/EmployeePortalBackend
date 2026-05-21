@@ -56,17 +56,13 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.Configure<VaultOptions>(opts =>
 {
-    opts.AgentAddress = builder.Configuration["Vault:AgentAddress"]
-                        ?? "http://127.0.0.1:8007";
+    opts.AgentAddress = Environment.GetEnvironmentVariable("VAULT_AGENT_ADDRESS")
+                        ?? "";
 
-    var tokenPath = builder.Configuration["Vault:AgentTokenPath"]
-                    ?? "/vault/token";
+    var token = Environment.GetEnvironmentVariable("Vault_Token")
+                    ?? "";
 
-    Console.WriteLine(tokenPath);
-
-    opts.AgentToken = File.Exists(tokenPath)
-        ? File.ReadAllText(tokenPath).Trim()
-        : "agent-proxy-token"; 
+    opts.AgentToken = token;
 });
 builder.Services.AddSingleton<VaultService>();
 
@@ -143,7 +139,7 @@ builder.Services.AddCors(options =>
         });
 });
 builder.Services.AddDbContext<BasicCustomerContext>(options =>
-    options.UseNpgsql("Host=customer-db;Port=5432;Database=mydb;Username=myuser;Password=mypassword;Include Error Detail=true;"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Customer_db")));
 
 builder.Services.AddAuthentication(options =>
 {

@@ -4,6 +4,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_KESTREL__CERTIFICATES__DEFAULT__PATH=/certs/backend.crt
+      - ASPNETCORE_KESTREL__CERTIFICATES__DEFAULT__KEYPATH=/certs/backend.key
     ports:
       - "8080"
       - "8081"
