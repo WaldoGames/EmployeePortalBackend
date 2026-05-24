@@ -151,7 +151,7 @@ builder.Services.AddAuthentication(options =>
 
         options.RequireHttpsMetadata = false;
 
-        options.Authority = "https://keycloak:7443/realms/Employee";
+        options.Authority = "https://10.10.10.103:7443/realms/Employee";
 
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
@@ -161,7 +161,7 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuers = new[]
             {
-                "https://localhost:7443/realms/Employee",
+                "https://10.10.10.103:7443/realms/Employee",
                 "https://keycloak:7443/realms/Employee"
             },
         };
