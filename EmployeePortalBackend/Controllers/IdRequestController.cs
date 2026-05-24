@@ -48,23 +48,65 @@ namespace EmployeePortalBackend.Controllers
         [HttpPost("upload-direct")]
         public async Task<IActionResult> UploadImage(IFormFile file, [FromQuery] string id)
         {
-
             if (file == null || file.Length == 0) return BadRequest("No file uploaded");
+
+            // Validate actual file content via magic bytes (do not trust extension or content-type)
+            if (!await IsValidImageAsync(file))
+                return BadRequest("File is not a valid image. Only JPEG, PNG, GIF, WebP, and BMP are accepted.");
+
             _logger.LogInformation("Id request for request {Request} is attempting to be completed", id);
+
             using (var stream = file.OpenReadStream())
             {
-                // We use the file name or a generated GUID
-                bool success = await imageRequestService.UploadImageAsync(stream, id, file.ContentType, _vaultOptions.NormalKey);//note: if enough time find a way to remove the key from here. but image uploads have no jwt token so a normal key is provided by default for now
-
+                bool success = await imageRequestService.UploadImageAsync(stream, id, file.ContentType, _vaultOptions.NormalKey);
                 if (success)
                 {
-                    // Since the backend did the work, it already knows it's successful!
-                    // You can update your database status here directly.
                     return Ok(new { message = "Upload successful" });
                 }
             }
+
             _logger.LogError("Id request for request {Request} failed", id);
             return StatusCode(500, "Internal server error during upload");
+        }
+
+        private static async Task<bool> IsValidImageAsync(IFormFile file)
+        {
+            var imageSignatures = new Dictionary<string, byte[][]>
+            {
+                { "JPEG",  [ [0xFF, 0xD8, 0xFF] ] },
+                { "PNG",   [ [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] ] },
+                { "GIF",   [ [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],   
+                             [0x47, 0x49, 0x46, 0x38, 0x39, 0x61] ] }, 
+                { "WebP",  [ [0x52, 0x49, 0x46, 0x46] ] },             
+                { "BMP",   [ [0x42, 0x4D] ] },
+            };
+            const int headerSize = 12;
+            byte[] header = new byte[headerSize];
+
+            using var stream = file.OpenReadStream();
+            int bytesRead = await stream.ReadAsync(header, 0, headerSize);
+
+            if (bytesRead < 4) return false;
+
+            foreach (var (format, signatures) in imageSignatures)
+            {
+                foreach (var sig in signatures)
+                {
+                    if (bytesRead >= sig.Length && header.Take(sig.Length).SequenceEqual(sig))
+                    {
+                        if (format == "WebP")
+                        {
+                            if (bytesRead < 12) return false;
+                            byte[] webpMark = [0x57, 0x45, 0x42, 0x50];
+                            return header.Skip(8).Take(4).SequenceEqual(webpMark);
+                        }
+
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
         [Authorize(Roles = "SensitiveDataAccess")]
         [HttpGet("load-direct")]
