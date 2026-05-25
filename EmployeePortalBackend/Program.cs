@@ -153,6 +153,12 @@ builder.Services.AddAuthentication(options =>
 
         options.Authority = "https://10.10.10.103:7443/realms/Employee";
 
+        options.BackchannelHttpHandler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback =
+        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        };
+
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
             ValidateIssuer = true,
