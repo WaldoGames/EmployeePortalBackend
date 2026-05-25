@@ -151,7 +151,7 @@ builder.Services.AddAuthentication(options =>
 
         options.RequireHttpsMetadata = false;
 
-        options.Authority = "https://10.10.10.103:7443/realms/Employee";
+        options.Authority = "https://keycloak:7443/realms/Employee";
 
         options.BackchannelHttpHandler = new HttpClientHandler
         {
