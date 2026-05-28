@@ -41,6 +41,26 @@ jobs:
             --no-self-contained
 
       # ── 3. Start the API ───────────────────────────────────────────────────
+      - name: Debug startup
+        run: |
+          CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
+          ENTRY="${CONFIG%.runtimeconfig.json}.dll"
+      
+          echo "=== Entry point ==="
+          echo "$ENTRY"
+          
+          echo "=== runtimeconfig ==="
+          cat "$CONFIG"
+      
+          echo "=== .NET info ==="
+          dotnet --info
+      
+          echo "=== Run directly (no redirect) ==="
+          ASPNETCORE_ENVIRONMENT=Testing \
+          ASPNETCORE_URLS=http://+:8080 \
+          dotnet "$ENTRY" &
+          sleep 8
+          jobs -l
       - name: Start API
         run: |
           # runtimeconfig.json only exists for the true entry-point project
