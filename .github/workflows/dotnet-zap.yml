@@ -31,7 +31,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'   # adjust to match your TFM
+          dotnet-version: '9.x'
 
       - name: Restore & publish
         run: |
@@ -41,43 +41,24 @@ jobs:
             --no-self-contained
 
       # ── 3. Start the API ───────────────────────────────────────────────────
-      - name: Debug startup
-        run: |
-          CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
-          ENTRY="${CONFIG%.runtimeconfig.json}.dll"
-      
-          echo "=== Entry point ==="
-          echo "$ENTRY"
-          
-          echo "=== runtimeconfig ==="
-          cat "$CONFIG"
-      
-          echo "=== .NET info ==="
-          dotnet --info
-      
-          echo "=== Run directly (no redirect) ==="
-          ASPNETCORE_ENVIRONMENT=Testing \
-          ASPNETCORE_URLS=http://+:8080 \
-          dotnet "$ENTRY" &
-          sleep 8
-          jobs -l
       - name: Start API
         run: |
-          # runtimeconfig.json only exists for the true entry-point project
           CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
           ENTRY="${CONFIG%.runtimeconfig.json}.dll"
+          ENTRY_FILENAME=$(basename "$ENTRY")
 
-          echo "Starting: $ENTRY"
+          echo "Starting: $ENTRY_FILENAME"
+          cd ./publish
           ASPNETCORE_ENVIRONMENT=Testing \
           ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
-          dotnet "$ENTRY" > api.log 2>&1 &
+          dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
 
           echo "API_PID=$!" >> "$GITHUB_ENV"
           sleep 5
 
           if ! kill -0 $API_PID 2>/dev/null; then
             echo "API crashed on startup — logs:"
-            cat api.log
+            cat ../api.log
             exit 1
           fi
 
@@ -146,7 +127,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🔍 ZAP DAST Scan Results\n\n${body}`
+              body: `## ZAP DAST Scan Results\n\n${body}`
             });
 
       # ── 8. Tear down ──────────────────────────────────────────────────────
