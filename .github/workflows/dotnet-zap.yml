@@ -43,17 +43,23 @@ jobs:
       # ── 3. Start the API ───────────────────────────────────────────────────
       - name: Start API
         run: |
-          # Find the entry-point DLL (matches the main project's output name)
-          ENTRY=$(find ./publish -maxdepth 1 -name "*.dll" \
-            ! -name "*.Views.dll" ! -name "*.deps.dll" \
-            | head -1)
+          # runtimeconfig.json only exists for the true entry-point project
+          CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
+          ENTRY="${CONFIG%.runtimeconfig.json}.dll"
 
           echo "Starting: $ENTRY"
           ASPNETCORE_ENVIRONMENT=Testing \
           ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
-          dotnet "$ENTRY" &
+          dotnet "$ENTRY" > api.log 2>&1 &
 
           echo "API_PID=$!" >> "$GITHUB_ENV"
+          sleep 5
+
+          if ! kill -0 $API_PID 2>/dev/null; then
+            echo "API crashed on startup — logs:"
+            cat api.log
+            exit 1
+          fi
 
       - name: Wait for API to be ready
         run: |
@@ -81,7 +87,7 @@ jobs:
         with:
           target: '${{ env.API_URL }}/swagger/v1/swagger.json'
           format: openapi
-          fail_action: false
+          fail_action: true
           allow_issue_writing: false
           rules_file_name: '.zap/rules.tsv'
           cmd_options: >-
@@ -104,6 +110,7 @@ jobs:
             zap-report.html
             zap-report.json
             zap-report.md
+            api.log
           retention-days: 30
 
       # ── 7. Post summary to PR ─────────────────────────────────────────────
