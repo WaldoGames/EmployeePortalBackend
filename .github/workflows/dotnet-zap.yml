@@ -47,7 +47,7 @@ jobs:
           echo "Starting: $ENTRY_FILENAME"
           cd ./publish
           ASPNETCORE_ENVIRONMENT=Testing \
-          ConnectionStrings__DefaultConnection="Server=localhost;Database=DummyDB;User Id=sa;Password=FakePassword123!;" \
+          ConnectionStrings__LogWriter="Server=localhost;Database=DummyDB;User Id=sa;Password=FakePassword123!;" \
           ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
           dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
 
