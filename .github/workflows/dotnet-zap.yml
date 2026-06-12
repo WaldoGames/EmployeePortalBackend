@@ -48,8 +48,8 @@ jobs:
           cd ./publish
           
           # 1. We use standard stdout/stderr extraction so we can catch early framework drops
-          ASPNETCORE_ENVIRONMENT=Testing \
-          ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
+          export ASPNETCORE_ENVIRONMENT=Testing
+          export ASPNETCORE_URLS="http://127.0.0.1:${{ env.API_PORT }}"
           ConnectionStrings__Customer_db="Host=localhost;Database=Dummy;Username=sa;Password=FakePassword123!" \
           dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
           
