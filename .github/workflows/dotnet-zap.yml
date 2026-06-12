@@ -10,8 +10,7 @@ on:
 env:
   API_PORT: 8080
   API_URL: http://localhost:8080
-  SWAGGER_URL: http://localhost:8080       # API and Swagger both on 8080 (no HTTPS in CI)
-
+  SWAGGER_URL: http://localhost:8081
 jobs:
   dast:
     name: ZAP API Scan
@@ -20,59 +19,12 @@ jobs:
       issues: write
       contents: read
 
-    # ── Managed services (health-checked before steps run) ─────────────────
-    services:
-      # Replaces customer-db (backend-data network)
-      customer-db:
-        image: postgres:16.2
-        env:
-          POSTGRES_USER: dast_user
-          POSTGRES_PASSWORD: dast_password
-          POSTGRES_DB: dast_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      # Replaces minio (backend-files network)
-      minio:
-        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-        env:
-          MINIO_ROOT_USER: dast_minio
-          MINIO_ROOT_PASSWORD: dast_minio_secret
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       # ── 1. Checkout ────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Start Keycloak (replaces keycloak network dependency) ──────────
-      # Keycloak needs ~60 s to start, so launch it early and wait later.
-      # --network host lets the API reach it at http://localhost:7080.
-      # Adjust the realm/client import to match your production realm export.
-      - name: Start Keycloak
-        run: |
-          docker run -d \
-            --name keycloak \
-            --network host \
-            -e KEYCLOAK_ADMIN=admin \
-            -e KEYCLOAK_ADMIN_PASSWORD=admin \
-            -e KC_HTTP_ENABLED=true \
-            -e KC_HOSTNAME_STRICT=false \
-            quay.io/keycloak/keycloak:24.0 \
-            start-dev --http-port 7080
-
-      # ── 3. Build the API ───────────────────────────────────────────────────
+      # ── 2. Build the API ───────────────────────────────────────────────────
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -85,70 +37,37 @@ jobs:
             --output ./publish \
             --no-self-contained
 
-      # ── 4. Wait for Keycloak ───────────────────────────────────────────────
-      - name: Wait for Keycloak
-        run: |
-          echo "Waiting for Keycloak..."
-          timeout 120 bash -c \
-            'until curl -sf http://localhost:7080/health/ready; do
-               sleep 5
-               echo "  still waiting..."
-             done'
-          echo "Keycloak is up."
-
-      # Optional: import your realm so users/clients exist for the DAST user.
-      # Export your realm from a running Keycloak instance with:
-      #   /opt/keycloak/bin/kc.sh export --file /tmp/realm.json --realm <your-realm>
-      # Then commit the file and uncomment the block below.
-      #
-      # - name: Import Keycloak realm
-      #   run: |
-      #     docker exec keycloak \
-      #       /opt/keycloak/bin/kc.sh import \
-      #         --file /opt/keycloak/data/import/realm.json \
-      #         --override true
-      #   # Mount the file by adding to the docker run above:
-      #   # -v ${{ github.workspace }}/.keycloak/realm.json:/opt/keycloak/data/import/realm.json
-
-      # ── 5. Start the API ───────────────────────────────────────────────────
-      # Vault is bypassed entirely: every secret Vault would normally inject
-      # is provided directly as an environment variable using .NET's __ separator.
-      # Add/adjust variable names to match your app's IConfiguration keys.
+      # ── 3. Start the API ───────────────────────────────────────────────────
       - name: Start API
         run: |
           CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
           ENTRY="${CONFIG%.runtimeconfig.json}.dll"
           ENTRY_FILENAME=$(basename "$ENTRY")
+
           echo "Starting: $ENTRY_FILENAME"
           cd ./publish
-
-          # ── Vault bypass: provide all secrets directly ───────────────────
-          # Disable the Vault client so it does not attempt to reach vault.internal.example.com
-          export Vault__VaultAddress=""
-          export Vault__RoleId=""
-
-          # Customer DB (backend-data) — override whatever Vault would inject
-          export ConnectionStrings__Customer_db="Host=localhost;Port=5432;Database=dast_db;Username=dast_user;Password=dast_password"
-
-          # MinIO (backend-files)
-          export Storage__Endpoint="http://localhost:9000"
-          export Storage__AccessKey="dast_minio"
-          export Storage__SecretKey="dast_minio_secret"
-
-          # Keycloak / JWT — point at the local instance
-          # Adjust key names to match your IConfiguration structure
-          export Keycloak__Authority="http://localhost:7080/realms/<your-realm>"
-          export Keycloak__ClientId="${{ secrets.DAST_KEYCLOAK_CLIENT_ID }}"
-          export Keycloak__ClientSecret="${{ secrets.DAST_KEYCLOAK_CLIENT_SECRET }}"
-
-          # ── Runtime settings ─────────────────────────────────────────────
+          
+          # 1. We use standard stdout/stderr extraction so we can catch early framework drops
           export ASPNETCORE_ENVIRONMENT=Testing
           export ASPNETCORE_URLS="http://127.0.0.1:${{ env.API_PORT }}"
-
+          ConnectionStrings__Customer_db="Host=localhost;Database=Dummy;Username=sa;Password=FakePassword123!" \
           dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
-          echo "API_PID=$!" >> "$GITHUB_ENV"
+          
+          # Capture the PID immediately into a local variable
+          LOCAL_PID=$!
+          echo "API_PID=$LOCAL_PID" >> "$GITHUB_ENV"
+          
+          sleep 5
+          
+          if ! kill -0 $LOCAL_PID 2>/dev/null; then
+            echo " API crashed on startup. Printing api.log contents:"
+            echo "---------------------------------------------------"
+            cat ../api.log
+            exit 1
+          else
+            echo "API started successfully with PID: $LOCAL_PID"
+          fi
 
-      # ── 6. Wait for API ────────────────────────────────────────────────────
       - name: Wait for API to be ready
         run: |
           echo "Waiting for API..."
@@ -159,12 +78,7 @@ jobs:
              done'
           echo "API is up."
 
-      # Dump the log regardless so startup errors are always visible
-      - name: Dump API startup log
-        if: always()
-        run: cat api.log || echo "(no log yet)"
-
-      # ── 7. Obtain JWT for ZAP ──────────────────────────────────────────────
+      # ── 4. Fetch an auth token (remove if your API is open) ───────────────
       - name: Obtain JWT for ZAP
         id: auth
         run: |
@@ -174,7 +88,7 @@ jobs:
             | jq -r '.accessToken')
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
-      # ── 8. ZAP API scan ────────────────────────────────────────────────────
+      # ── 5. ZAP API scan ───────────────────────────────────────────────────
       - name: ZAP API Scan
         uses: zaproxy/action-api-scan@v0.9.0
         with:
@@ -193,7 +107,7 @@ jobs:
             -w zap-report.md
             -r zap-report.html
 
-      # ── 9. Upload reports ──────────────────────────────────────────────────
+      # ── 6. Upload reports ─────────────────────────────────────────────────
       - name: Upload ZAP reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -206,7 +120,7 @@ jobs:
             api.log
           retention-days: 30
 
-      # ── 10. Post summary to PR ─────────────────────────────────────────────
+      # ── 7. Post summary to PR ─────────────────────────────────────────────
       - name: Add ZAP summary to PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
@@ -222,11 +136,7 @@ jobs:
               body: `## ZAP DAST Scan Results\n\n${body}`
             });
 
-      # ── 11. Tear down ──────────────────────────────────────────────────────
+      # ── 8. Tear down ──────────────────────────────────────────────────────
       - name: Stop API
         if: always()
         run: kill ${{ env.API_PID }} 2>/dev/null || true
-
-      - name: Stop Keycloak
-        if: always()
-        run: docker rm -f keycloak 2>/dev/null || true
