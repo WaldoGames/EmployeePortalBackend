@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Waiting for API..."
           timeout 90 bash -c \
-            'until curl -sf ${{ env.API_URL }}/health; do
+            'until curl -sf ${{ env.API_URL }}/swagger/v1/swagger.json; do
                sleep 3
                echo "  still waiting..."
              done'
