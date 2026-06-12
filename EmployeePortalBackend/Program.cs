@@ -88,27 +88,10 @@ var columnWriters = new Dictionary<string, ColumnWriterBase>
 };
 
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
+    .ReadFrom.Configuration(builder.Configuration) // <--- THIS READS FROM YOUR JSON FILES
     .Enrich.FromLogContext()
     .Enrich.WithMachineName()
-    .WriteTo.PostgreSQL(
-        connectionString: builder.Configuration.GetConnectionString("LogWriter"),
-        tableName: "logs",
-        columnOptions: columnWriters,
-        needAutoCreateTable: false,   // table already exists from init.sql
-        batchSizeLimit: 50,
-        period: TimeSpan.FromSeconds(5),
-        failureCallback: ex =>
-            {
-                Console.Error.WriteLine(builder.Configuration.GetConnectionString("LogWriter"));
-
-                // This fires when a batch fails to write to Postgres
-                Console.Error.WriteLine($"[LOG SINK FAILURE] {ex.Message}");
-                    // or alert via email, Slack, health check endpoint, etc.
-            }
-    )
     .CreateLogger();
-
 builder.Host.UseSerilog();
 
 #endregion
