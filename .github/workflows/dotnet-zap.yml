@@ -46,25 +46,33 @@ jobs:
 
           echo "Starting: $ENTRY_FILENAME"
           cd ./publish
+          
+          # 1. We use standard stdout/stderr extraction so we can catch early framework drops
           ASPNETCORE_ENVIRONMENT=Testing \
-          ConnectionStrings__LogWriter="Server=localhost;Database=DummyDB;User Id=sa;Password=FakePassword123!;" \
           ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
+          ConnectionStrings__Customer_db="Host=localhost;Database=Dummy;Username=sa;Password=FakePassword123!" \
           dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
-
-          echo "API_PID=$!" >> "$GITHUB_ENV"
+          
+          # Capture the PID immediately into a local variable
+          LOCAL_PID=$!
+          echo "API_PID=$LOCAL_PID" >> "$GITHUB_ENV"
+          
           sleep 5
-
-          if ! kill -0 $API_PID 2>/dev/null; then
-            echo "API crashed on startup — logs:"
+          
+          if ! kill -0 $LOCAL_PID 2>/dev/null; then
+            echo " API crashed on startup. Printing api.log contents:"
+            echo "---------------------------------------------------"
             cat ../api.log
             exit 1
+          else
+            echo "API started successfully with PID: $LOCAL_PID"
           fi
 
       - name: Wait for API to be ready
         run: |
           echo "Waiting for API..."
           timeout 90 bash -c \
-            'until curl -sf ${{ env.API_URL }}/health; do
+            'until curl -sf ${{ env.API_URL }}/swagger/v1/swagger.json; do
                sleep 3
                echo "  still waiting..."
              done'
