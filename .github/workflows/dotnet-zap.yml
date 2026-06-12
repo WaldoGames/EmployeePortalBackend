@@ -1,0 +1,134 @@
+name: DAST – ZAP API Scan
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  API_PORT: 8080
+  API_URL: http://localhost:8080
+
+jobs:
+  dast:
+    name: ZAP API Scan
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Build the API ───────────────────────────────────────────────────
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      - name: Restore & publish
+        run: |
+          dotnet publish EmployeePortalBackend-core.sln \
+            --configuration Release \
+            --output ./publish \
+            --no-self-contained
+
+      # ── 3. Start the API ───────────────────────────────────────────────────
+      - name: Start API
+        run: |
+          CONFIG=$(find ./publish -maxdepth 1 -name "*.runtimeconfig.json" | head -1)
+          ENTRY="${CONFIG%.runtimeconfig.json}.dll"
+          ENTRY_FILENAME=$(basename "$ENTRY")
+
+          echo "Starting: $ENTRY_FILENAME"
+          cd ./publish
+          ASPNETCORE_ENVIRONMENT=Testing \
+          ConnectionStrings__LogWriter="Server=localhost;Database=DummyDB;User Id=sa;Password=FakePassword123!;" \
+          ASPNETCORE_URLS=http://+:${{ env.API_PORT }} \
+          dotnet "$ENTRY_FILENAME" > ../api.log 2>&1 &
+
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+          sleep 5
+
+          if ! kill -0 $API_PID 2>/dev/null; then
+            echo "API crashed on startup — logs:"
+            cat ../api.log
+            exit 1
+          fi
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API..."
+          timeout 90 bash -c \
+            'until curl -sf ${{ env.API_URL }}/health; do
+               sleep 3
+               echo "  still waiting..."
+             done'
+          echo "API is up."
+
+      # ── 4. Fetch an auth token (remove if your API is open) ───────────────
+      - name: Obtain JWT for ZAP
+        id: auth
+        run: |
+          TOKEN=$(curl -sf -X POST ${{ env.API_URL }}/auth/token \
+            -H "Content-Type: application/json" \
+            -d '{"username":"${{ secrets.DAST_USER }}","password":"${{ secrets.DAST_PASSWORD }}"}' \
+            | jq -r '.accessToken')
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      # ── 5. ZAP API scan ───────────────────────────────────────────────────
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.9.0
+        with:
+          target: '${{ env.API_URL }}/swagger/v1/swagger.json'
+          format: openapi
+          fail_action: true
+          allow_issue_writing: false
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: >-
+            -z "-config replacer.full_list(0).description=auth
+                -config replacer.full_list(0).enabled=true
+                -config replacer.full_list(0).matchtype=REQ_HEADER
+                -config replacer.full_list(0).matchstr=Authorization
+                -config replacer.full_list(0).replacement=Bearer ${{ steps.auth.outputs.token }}"
+            -J zap-report.json
+            -w zap-report.md
+            -r zap-report.html
+
+      # ── 6. Upload reports ─────────────────────────────────────────────────
+      - name: Upload ZAP reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-reports-${{ github.run_number }}
+          path: |
+            zap-report.html
+            zap-report.json
+            zap-report.md
+            api.log
+          retention-days: 30
+
+      # ── 7. Post summary to PR ─────────────────────────────────────────────
+      - name: Add ZAP summary to PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('zap-report.md')) return;
+            const body = fs.readFileSync('zap-report.md', 'utf8').slice(0, 65000);
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ZAP DAST Scan Results\n\n${body}`
+            });
+
+      # ── 8. Tear down ──────────────────────────────────────────────────────
+      - name: Stop API
+        if: always()
+        run: kill ${{ env.API_PID }} 2>/dev/null || true
