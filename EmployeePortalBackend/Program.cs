@@ -129,7 +129,15 @@ builder.Services.AddAuthentication(options =>
 
         options.RequireHttpsMetadata = false;
 
-        options.Authority = "http://keycloak:7080/realms/Employee";
+        if (builder.Environment.IsEnvironment("Testing"))
+        {
+            options.MetadataAddress = ""; // Prevents looking for Keycloak on startup
+            options.Configuration = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration();
+        }
+        else
+        {
+            options.Authority = "http://keycloak:7080/realms/Employee";
+        }
 
         options.BackchannelHttpHandler = new HttpClientHandler
         {
@@ -196,7 +204,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
