@@ -10,7 +10,7 @@ on:
 env:
   API_PORT: 8080
   API_URL: http://localhost:8080
-  SWAGGER_URL: https://localhost:8081
+  SWAGGER_URL: http://localhost:8081
 jobs:
   dast:
     name: ZAP API Scan
