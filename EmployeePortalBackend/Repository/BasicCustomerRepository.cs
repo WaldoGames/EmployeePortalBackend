@@ -112,5 +112,16 @@ namespace EmployeePortalBackend.Repository
         {
             return customerContext.Customers.Where(c => c.FirstNameHash == firstNameHashed).ToList();
         }
+
+        public void DeleteCustomer(string customerId)
+        {
+            Customer customer = customerContext.Customers.Where(c => c.Id == customerId).FirstOrDefault();
+
+            if (customer != null)
+            {
+                customerContext.Customers.Remove(customer);
+                customerContext.SaveChanges();
+            }
+        }
     }
 }

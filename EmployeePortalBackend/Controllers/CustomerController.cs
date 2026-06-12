@@ -58,6 +58,28 @@ namespace EmployeePortalBackend.Controllers
             return Ok(result);
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            _logger.LogInformation("Search delete request {id} done by {User}", id, User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            if(!doesCustomerExist(id))
+            {
+                return NotFound();
+            }
+
+            customerService.DeleteCustomer(id);
+
+            return Ok();
+        }
+
+        private bool doesCustomerExist(string id)
+        {
+            return customerService.doesCustomerExist(id);
+        }
+
+        
+
         private string getKey()
         {
             if (User.Identity?.IsAuthenticated != true)

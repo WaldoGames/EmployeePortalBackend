@@ -15,10 +15,5 @@ namespace EmployeePortalBackend.DTO.TicketsDtos
 
         [StringLength(36, MinimumLength =36, ErrorMessage = "customerId not a valid id")]
         public string CustomerId { get; set; }
-        [StringLength(36, MinimumLength = 36, ErrorMessage = "CreatorId not a valid id")]
-        public string CreatorEmployeeId { get; set; }
-
-        [StringLength(100, ErrorMessage = "Creator name should be less then 100 characters")]
-        public string CreatorEmployeeName { get; set; }
     }
 }

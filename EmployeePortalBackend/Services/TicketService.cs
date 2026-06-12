@@ -19,7 +19,7 @@ namespace EmployeePortalBackend.Services
             encryption = vc;
         }
 
-        public async Task<string?> createTicket(CreateTicketDto dto, string id, string key)
+        public async Task<string?> createTicket(CreateTicketDto dto, string id, string key, string employeeId, string employeeName)
         {
             var customer = _customerRepository.TryGetCustomerById(dto.CustomerId);
             if (customer == null)
@@ -37,8 +37,8 @@ namespace EmployeePortalBackend.Services
                 CreatedDate = DateTime.UtcNow.ToString(),
                 EditedDate = DateTime.UtcNow.ToString(),
                 CustomerId = dto.CustomerId,
-                CreatorEmployeeId = dto.CreatorEmployeeId,
-                CreatorEmployeeName = dto.CreatorEmployeeName,
+                CreatorEmployeeId = employeeId,
+                CreatorEmployeeName = employeeName,
 
             };
             _repository.CreateTicket(newTicket);

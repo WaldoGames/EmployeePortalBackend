@@ -100,5 +100,20 @@ namespace EmployeePortalBackend.Services
             return trigrams;
         }
 
+        public bool doesCustomerExist(string id)
+        {
+            Customer? c = _repository.TryGetCustomerById(id);
+            if (c == null)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public void DeleteCustomer(string customerId)
+        {
+            _repository.DeleteCustomer(customerId);
+        }
+
     }
 }

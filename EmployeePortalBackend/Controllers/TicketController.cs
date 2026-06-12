@@ -43,7 +43,9 @@ namespace EmployeePortalBackend.Controllers
 
             string id = Guid.NewGuid().ToString();
 
-            var c = await ticketService.createTicket(test, id, getKey());
+            //var x = User;
+
+            var c = await ticketService.createTicket(test, id, getKey(), User.FindFirstValue(ClaimTypes.NameIdentifier), User.FindFirstValue("preferred_username"));
 
             if (c == null)
             {

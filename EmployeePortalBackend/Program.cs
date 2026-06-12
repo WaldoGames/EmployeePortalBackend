@@ -56,11 +56,9 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.Configure<VaultOptions>(opts =>
 {
-    opts.AgentAddress = Environment.GetEnvironmentVariable("VAULT_AGENT_ADDRESS")
-                        ?? "";
+    opts.AgentAddress = Environment.GetEnvironmentVariable("VAULT_AGENT_ADDRESS");
 
-    var token = Environment.GetEnvironmentVariable("Vault_Token")
-                    ?? "";
+    var token = Environment.GetEnvironmentVariable("Vault_Token");
 
     opts.AgentToken = token;
 });
@@ -70,9 +68,6 @@ builder.Services.Configure<VaultKeySettings>(
     builder.Configuration.GetSection("Vault")
 );
 
-builder.Services.Configure<VaultKeySettings>(
-    builder.Configuration.GetSection("Vault")
-);
 builder.Services.Configure<MiniOSettings>(
     builder.Configuration.GetSection("MiniO")
 );
@@ -132,7 +127,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowSpecificOrigin",
         builder =>
         {
-            builder.WithOrigins("https://10.10.10.103")
+            builder.WithOrigins("https://localhost")
                    .AllowAnyHeader()
                    .AllowAnyMethod()
                    .AllowCredentials();
@@ -151,7 +146,7 @@ builder.Services.AddAuthentication(options =>
 
         options.RequireHttpsMetadata = false;
 
-        options.Authority = "https://keycloak:7443/realms/Employee";
+        options.Authority = "http://keycloak:7080/realms/Employee";
 
         options.BackchannelHttpHandler = new HttpClientHandler
         {
@@ -167,8 +162,10 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuers = new[]
             {
-                "https://10.10.10.103:7443/realms/Employee",
-                "https://keycloak:7443/realms/Employee"
+                //"https://localhost:7443/realms/Employee",
+                //"https://keycloak:7443/realms/Employee",
+                "http://localhost:7080/realms/Employee",
+                "http://keycloak:7080/realms/Employee"
             },
         };
 

@@ -20,5 +20,7 @@ namespace EmployeePortalBackend.Interface
         public Task PostTrigramHashes(List<string> trigramHashes);
 
         public void ConnectUserToTrigramHashes(string customerId, List<string> trigramHashIds);
+
+        public void DeleteCustomer(string customerId);
     }
 }

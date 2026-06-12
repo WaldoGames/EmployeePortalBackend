@@ -6,7 +6,11 @@ services:
       context: .
       dockerfile: EmployeePortalBackend/Dockerfile
     networks:
-      - vault_test
+      - backend-data
+      - backend-log
+      - vault
+      - backend-files
+      - keycloak
     env_file:
       - .env
     volumes:
@@ -14,5 +18,15 @@ services:
       - ./backend.crt:/certs/backend.crt
       - ./backend.key:/certs/backend.key
 networks:
-  vault_test:
+  backend-data:
+    external: true
+  backend-log:
+    external: true
+  backend-agent:
+    external: true
+  backend-files:
+    external: true
+  keycloak:
+    external: true
+  vault:
     external: true
